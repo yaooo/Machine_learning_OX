@@ -81,7 +81,7 @@ def find_weight(X, y):
     return np.matmul(np.matmul(inv(np.matmul(X_trans, X)), X_trans), y)
 
 
-# In[41]:
+# In[7]:
 
 
 # Placeholder for the standalized data
@@ -103,7 +103,7 @@ for i in range(D):
     print("Testing: mean =", np.mean(X_test_standard[:, i]), "var =", np.var(X_test_standard[:, i]))
 
 
-# In[42]:
+# In[8]:
 
 
 # Include a column of ones to data matrices
@@ -126,7 +126,7 @@ print("Eorror on the testing dataset", mseError(y_train_expected, y_train))
 
 # ## Handin 4 Learning Curve
 
-# In[52]:
+# In[9]:
 
 
 def FirstNmseError(predictor, y, N):
@@ -135,7 +135,7 @@ def FirstNmseError(predictor, y, N):
     return np.sum(t)/len(t)
 
 
-# In[70]:
+# In[10]:
 
 
 train_error = []
@@ -162,6 +162,84 @@ plt.plot(np.linspace(20,600, num=mat1.shape[0]), mat1, label='MSE Training Data'
 plt.plot(np.linspace(20,600, num=mat2.shape[0]), mat2, label='MSE Test Data')
 plt.legend()
 plt.show()
+
+
+# # Optional
+
+# In[11]:
+
+
+from sklearn import linear_model
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.metrics import mean_squared_error
+from scipy.stats import mode
+
+N, D = X.shape
+X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=0.8)
+ridge_pipeline = make_pipeline(StandardScaler(), PolynomialFeatures(2, include_bias=True), linear_model.Ridge())
+lasso_pipeline = make_pipeline(StandardScaler(), PolynomialFeatures(2), linear_model.Lasso())
+
+
+# In[12]:
+
+
+# Ridge model
+ridge_alpha = 0.01
+lasso_alpha = 0.01
+
+choice = [0.01, 0.1, 1, 10, 100]
+ridge_score = np.zeros(5)
+lasso_score = np.zeros(5)
+
+for _ in range(10):
+    X_train, X_validate, y_train, y_validate = train_test_split(X_train_val, y_train_val, test_size=0.8)
+    for i in range(5):
+        ridge_pipeline.set_params(ridge__alpha=choice[i])        
+        ridge_pipeline.fit(X_train, y_train)
+        s = ridge_pipeline.score(X_validate,y_validate)
+#         print("lambda", choice[i], "score", s)
+        ridge_score[i] += s
+        
+        lasso_pipeline.set_params(lasso__alpha=choice[i])
+        lasso_pipeline.fit(X_train, y_train)
+        s = lasso_pipeline.score(X_validate,y_validate)
+#         print("lambda", choice[i], "score", s)
+        lasso_score[i] += s
+        
+print("Best alpha for ridge model:", choice[np.argmax(ridge_score)])
+print("Best alpha for lasso model:", choice[np.argmax(lasso_score)])
+
+
+# In[13]:
+
+
+ridge_pipeline.set_params(ridge__alpha=choice[np.argmax(ridge_score)])
+lasso_pipeline.set_params(lasso__alpha=choice[np.argmax(lasso_score)])
+
+ridge_pipeline.fit(X_train_val, y_train_val)
+lasso_pipeline.fit(X_train_val, y_train_val)
+
+
+# In[14]:
+
+
+def error(pipeline, x, y, name, ifTraining):
+    y_true = y
+    y_pred = pipeline.predict(x)
+    error = mean_squared_error(y_true, y_pred)
+    if ifTraining:
+        print("Error on Training data set with", name, ":", error)
+    else:
+        print("Error on Testting data set with", name, ":", error)
+
+error(ridge_pipeline, X_train_val, y_train_val, "Ridge", True)
+error(ridge_pipeline, X_test, y_test, "Ridge", False)
+
+print()
+error(lasso_pipeline, X_train_val, y_train_val, "Lasso", True)
+error(lasso_pipeline, X_test, y_test, "Lasso", False)
 
 
 # In[ ]:
